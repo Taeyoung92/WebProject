@@ -4,13 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import com.shop.board.question.QuestionService;
+import com.shop.board.spring.question.SpringQuestionService;
 
 @SpringBootTest
 class Project1stApplicationTests {
 	
 	@Autowired
-    private QuestionService questionService;
+    private SpringQuestionService questionService;
 
     @Test
     void testJpa() {

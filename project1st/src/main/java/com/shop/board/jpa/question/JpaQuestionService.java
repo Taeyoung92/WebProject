@@ -1,0 +1,97 @@
+package com.shop.board.jpa.question;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.shop.board.DataNotFoundException;
+import com.shop.board.spring.answer.SpringAnswer;
+import com.shop.board.user.SiteUser;
+
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+@Service
+public class JpaQuestionService {
+
+	private final JpaQuestionRepository questionRepository;
+	
+	private Specification<JpaQuestion> search(String kw) {
+        return new Specification<>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Predicate toPredicate(Root<JpaQuestion> q, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                query.distinct(true);  // 중복을 제거 
+                Join<JpaQuestion, SiteUser> u1 = q.join("author", JoinType.LEFT);
+                Join<JpaQuestion, SpringAnswer> a = q.join("answerList", JoinType.LEFT);
+                Join<SpringAnswer, SiteUser> u2 = a.join("author", JoinType.LEFT);
+                return cb.or(cb.like(q.get("subject"), "%" + kw + "%"), // 제목 
+                        cb.like(q.get("content"), "%" + kw + "%"),      // 내용 
+                        cb.like(u1.get("username"), "%" + kw + "%"),    // 질문 작성자 
+                        cb.like(a.get("content"), "%" + kw + "%"),      // 답변 내용 
+                        cb.like(u2.get("username"), "%" + kw + "%"));   // 답변 작성자 
+            }
+        };
+    }
+
+    public List<JpaQuestion> getList() {
+        return this.questionRepository.findAll();
+    }
+    
+    public JpaQuestion getQuestion(Integer id) {  
+        Optional<JpaQuestion> question = this.questionRepository.findById(id);
+        if (question.isPresent()) {
+            return question.get();
+        } else {
+            throw new DataNotFoundException("question not found");
+        }
+    }
+    
+    public Page<JpaQuestion> getList(int page, String kw) {
+    	List<Sort.Order> sorts = new ArrayList<>();
+        sorts.add(Sort.Order.desc("createDate"));
+        Pageable pageable = PageRequest.of(page, 10, Sort.by(sorts));
+        Specification<JpaQuestion> spec = search(kw);
+        return this.questionRepository.findAll(spec, pageable);
+    }
+    
+    public void create(String subject, String content, SiteUser user) {
+        JpaQuestion q = new JpaQuestion();
+        q.setSubject(subject);
+        q.setContent(content);
+        q.setCreateDate(LocalDateTime.now());
+        q.setAuthor(user);
+        this.questionRepository.save(q);
+    }
+    
+    public void modify(JpaQuestion question, String subject, String content) {
+        question.setSubject(subject);
+        question.setContent(content);
+        question.setModifyDate(LocalDateTime.now());
+        this.questionRepository.save(question);
+    }
+    
+    public void delete(JpaQuestion question) {
+        this.questionRepository.delete(question);
+    }
+    
+    public void vote(JpaQuestion question, SiteUser siteUser) {
+        question.getVoter().add(siteUser);
+        this.questionRepository.save(question);
+    }
+}

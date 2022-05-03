@@ -1,4 +1,4 @@
-package com.shop.board.question;
+package com.shop.board.jpa.question;
 
 import java.security.Principal;
 
@@ -17,44 +17,44 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.shop.board.answer.AnswerForm;
+import com.shop.board.spring.answer.SpringAnswerForm;
 import com.shop.board.user.SiteUser;
 import com.shop.board.user.UserService;
 
 import lombok.RequiredArgsConstructor;
 
-@RequestMapping("/question")
+@RequestMapping("/jpa/question")
 @RequiredArgsConstructor
 @Controller
-public class QuestionController {
+public class JpaQuestionController {
 	
-	private final QuestionService questionService;
+	private final JpaQuestionService questionService;
 	private final UserService userService;
 
 	@RequestMapping("/list")
 	public String list(Model model, @RequestParam(value="page", defaultValue="0") int page, @RequestParam(value = "kw", defaultValue = "") String kw) {
-		Page<Question> paging = this.questionService.getList(page, kw);
+		Page<JpaQuestion> paging = this.questionService.getList(page, kw);
         model.addAttribute("paging", paging);
         model.addAttribute("kw", kw);
         return "question_list";
     }
 	
 	@RequestMapping(value = "/detail/{id}")
-    public String detail(Model model, @PathVariable("id") Integer id, AnswerForm answerForm) {
-		Question question = this.questionService.getQuestion(id);
+    public String detail(Model model, @PathVariable("id") Integer id, SpringAnswerForm answerForm) {
+		JpaQuestion question = this.questionService.getQuestion(id);
         model.addAttribute("question", question);
         return "question_detail";
     }
 	
 	@PreAuthorize("isAuthenticated()")
 	@GetMapping("/create")
-    public String questionCreate(QuestionForm questionForm) {
+    public String questionCreate(JpaQuestionForm questionForm) {
         return "question_form";
     }
 	
 	@PreAuthorize("isAuthenticated()")
 	@PostMapping("/create")
-    public String questionCreate(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal) {
+    public String questionCreate(@Valid JpaQuestionForm questionForm, BindingResult bindingResult, Principal principal) {
         if (bindingResult.hasErrors()) {
             return "question_form";
         }
@@ -65,8 +65,8 @@ public class QuestionController {
 	
 	@PreAuthorize("isAuthenticated()")
     @GetMapping("/modify/{id}")
-    public String questionModify(QuestionForm questionForm, @PathVariable("id") Integer id, Principal principal) {
-        Question question = this.questionService.getQuestion(id);
+    public String questionModify(JpaQuestionForm questionForm, @PathVariable("id") Integer id, Principal principal) {
+        JpaQuestion question = this.questionService.getQuestion(id);
         if(!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
@@ -77,12 +77,12 @@ public class QuestionController {
 	
 	@PreAuthorize("isAuthenticated()")
     @PostMapping("/modify/{id}")
-    public String questionModify(@Valid QuestionForm questionForm, BindingResult bindingResult, 
+    public String questionModify(@Valid JpaQuestionForm questionForm, BindingResult bindingResult, 
             Principal principal, @PathVariable("id") Integer id) {
         if (bindingResult.hasErrors()) {
             return "question_form";
         }
-        Question question = this.questionService.getQuestion(id);
+        JpaQuestion question = this.questionService.getQuestion(id);
         if (!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
@@ -93,7 +93,7 @@ public class QuestionController {
 	@PreAuthorize("isAuthenticated()")
     @GetMapping("/delete/{id}")
     public String questionDelete(Principal principal, @PathVariable("id") Integer id) {
-        Question question = this.questionService.getQuestion(id);
+        JpaQuestion question = this.questionService.getQuestion(id);
         if (!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제권한이 없습니다.");
         }
@@ -104,7 +104,7 @@ public class QuestionController {
 	@PreAuthorize("isAuthenticated()")
     @GetMapping("/vote/{id}")
     public String questionVote(Principal principal, @PathVariable("id") Integer id) {
-        Question question = this.questionService.getQuestion(id);
+        JpaQuestion question = this.questionService.getQuestion(id);
         SiteUser siteUser = this.userService.getUser(principal.getName());
         this.questionService.vote(question, siteUser);
         return String.format("redirect:/question/detail/%s", id);
